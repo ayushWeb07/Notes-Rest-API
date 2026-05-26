@@ -37,6 +37,7 @@ func main() {
 
 	// create a router instance
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// setup routes
 	router.GET("/", getHome)
