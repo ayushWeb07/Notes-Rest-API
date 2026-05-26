@@ -18,6 +18,7 @@ func LoadConfig() (*Config, error) {
 
 	if err != nil {
 		fmt.Println("Something went wrong while loading the env variables:", err)
+		return nil, err
 	}
 
 	// load the actual envs
@@ -26,5 +27,5 @@ func LoadConfig() (*Config, error) {
 		Port:                  os.Getenv("PORT"),
 	}
 
-	return c, err
+	return c, nil
 }
