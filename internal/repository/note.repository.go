@@ -47,10 +47,9 @@ func GetAllNotes(pool *pgxpool.Pool) ([]models.Note, error) {
 	defer cancelFunc()
 
 	// get all query
-	query := "SELECT id, title, description, created_at, updated_at FROM notes ORDER BY updated_at;"
+	query := "SELECT id, title, description, created_at, updated_at FROM notes ORDER BY updated_at DESC;"
 
 	rows, err := pool.Query(ctx, query)
-
 	defer rows.Close()
 
 	if err != nil {

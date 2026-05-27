@@ -43,6 +43,7 @@ func main() {
 	// setup routes
 	router.GET("/", getHome)
 	router.POST("/notes", handlers.CreateNote(pool))
+	router.GET("/notes", handlers.GetAllNotes(pool))
 
 	// run the server router
 	router.Run(":" + config.Port)
