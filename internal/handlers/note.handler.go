@@ -10,17 +10,22 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Note struct {
+type CreateNoteInput struct {
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description" binding:"required"`
 }
 
+type UpdateNoteInput struct {
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+}
+
 func CreateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		data := Note{}
+		data := CreateNoteInput{}
 
 		// bind the req json body with the note struct
-		if err := c.BindJSON(&data); err != nil {
+		if err := c.ShouldBindJSON(&data); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Failed to create a new note as some fields were missing",
 				"error":   err.Error(),
@@ -109,6 +114,96 @@ func GetNoteById(pool *pgxpool.Pool) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Successfully fetched the note",
 			"note":    note,
+		})
+	}
+}
+
+func UpdateNote(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		data := UpdateNoteInput{}
+
+		// bind the req json body with the note struct
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Failed to update the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// fetch the id from params
+		idParam := c.Param("id")
+		idNumParam, err := strconv.Atoi(idParam)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid id passed in the params",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// fetch the existing note
+		existingNote, err := repository.GetNoteById(pool, idNumParam)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "Note either deleted or does not exist",
+					"error":   err.Error(),
+				})
+
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while updating the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		title := existingNote.Title
+		description := existingNote.Description
+
+		// check if title has been modified and it's not empty
+		if data.Title != nil && *data.Title != "" {
+			title = *data.Title
+		}
+
+		// check if description has been modified and it's not empty
+		if data.Description != nil && *data.Description != "" {
+			description = *data.Description
+		}
+
+		// check if none of the fields have been modified
+		if data.Title == nil && data.Description == nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "At least specify one field to modify the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// call the repository endpoint
+		updatedNote, err := repository.UpdateNote(pool, idNumParam, title, description)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while updating the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully updated the note",
+			"note":    updatedNote,
 		})
 	}
 }

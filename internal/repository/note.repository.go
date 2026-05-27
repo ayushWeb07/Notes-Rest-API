@@ -108,7 +108,34 @@ func GetNoteById(pool *pgxpool.Pool, id int) (*models.Note, error) {
 	)
 
 	if err != nil {
-		fmt.Println("Something went wrong while inserting note into database:", err)
+		fmt.Println("Something went wrong while fetching a note from database:", err)
+		return nil, err
+	}
+
+	return &note, nil
+}
+
+func UpdateNote(pool *pgxpool.Pool, id int, title string, description string) (*models.Note, error) {
+	// create a timed context to free up resources associated with it & avoid slow connections
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+
+	// release resource once all the operations are done
+	defer cancelFunc()
+
+	// update single row query
+	query := "UPDATE notes SET title=$1, description=$2, updated_at= now() WHERE id=$3 RETURNING id, title, description, created_at, updated_at"
+	note := models.Note{}
+
+	err := pool.QueryRow(ctx, query, title, description, id).Scan(
+		&note.ID,
+		&note.Title,
+		&note.Description,
+		&note.CreatedAt,
+		&note.UpdatedAt,
+	)
+
+	if err != nil {
+		fmt.Println("Something went wrong while updating the note in the database:", err)
 		return nil, err
 	}
 
