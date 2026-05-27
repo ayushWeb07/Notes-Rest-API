@@ -45,3 +45,24 @@ func CreateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		})
 	}
 }
+
+func GetAllNotes(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// call the repository endpoint
+		allNotes, err := repository.GetAllNotes(pool)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while reading all the notes",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully fetched all the notes",
+			"notes":   allNotes,
+		})
+	}
+}
