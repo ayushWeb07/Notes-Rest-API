@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/ayushWeb07/Notes-Rest-API/internal/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -63,6 +65,50 @@ func GetAllNotes(pool *pgxpool.Pool) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Successfully fetched all the notes",
 			"notes":   allNotes,
+		})
+	}
+}
+
+func GetNoteById(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// fetch the id from params
+		idParam := c.Param("id")
+		idNumParam, err := strconv.Atoi(idParam)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid id passed in the params",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// call the repository endpoint
+		note, err := repository.GetNoteById(pool, idNumParam)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "Note either deleted or does not exist",
+					"error":   err.Error(),
+				})
+
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while fetching the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully fetched the note",
+			"note":    note,
 		})
 	}
 }

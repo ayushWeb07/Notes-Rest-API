@@ -87,3 +87,30 @@ func GetAllNotes(pool *pgxpool.Pool) ([]models.Note, error) {
 
 	return allNotes, nil
 }
+
+func GetNoteById(pool *pgxpool.Pool, id int) (*models.Note, error) {
+	// create a timed context to free up resources associated with it & avoid slow connections
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+
+	// release resource once all the operations are done
+	defer cancelFunc()
+
+	// get single row query
+	query := "SELECT id, title, description, created_at, updated_at FROM notes WHERE id=$1"
+	note := models.Note{}
+
+	err := pool.QueryRow(ctx, query, id).Scan(
+		&note.ID,
+		&note.Title,
+		&note.Description,
+		&note.CreatedAt,
+		&note.UpdatedAt,
+	)
+
+	if err != nil {
+		fmt.Println("Something went wrong while inserting note into database:", err)
+		return nil, err
+	}
+
+	return &note, nil
+}
