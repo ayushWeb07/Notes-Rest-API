@@ -46,6 +46,7 @@ func main() {
 	router.GET("/notes", handlers.GetAllNotes(pool))
 	router.GET("/notes/:id", handlers.GetNoteById(pool))
 	router.PUT("/notes/:id", handlers.UpdateNote(pool))
+	router.DELETE("/notes/:id", handlers.DeleteNote(pool))
 
 	// run the server router
 	router.Run(":" + config.Port)

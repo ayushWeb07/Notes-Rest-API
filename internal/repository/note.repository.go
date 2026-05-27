@@ -141,3 +141,28 @@ func UpdateNote(pool *pgxpool.Pool, id int, title string, description string) (*
 
 	return &note, nil
 }
+
+func DeleteNote(pool *pgxpool.Pool, id int) error {
+	// create a timed context to free up resources associated with it & avoid slow connections
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+
+	// release resource once all the operations are done
+	defer cancelFunc()
+
+	// delete row query
+	query := "DELETE FROM notes WHERE id=$1"
+
+	cmdTag, err := pool.Exec(ctx, query, id)
+
+	if err != nil {
+		fmt.Println("Something went wrong while deleting the note in the database:", err)
+		return err
+	}
+
+	// no rows got deleted
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("Such note does not exist")
+	}
+
+	return nil
+}

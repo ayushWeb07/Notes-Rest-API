@@ -207,3 +207,57 @@ func UpdateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		})
 	}
 }
+
+func DeleteNote(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// fetch the id from params
+		idParam := c.Param("id")
+		idNumParam, err := strconv.Atoi(idParam)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid id passed in the params",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// fetch the existing note
+		_, err = repository.GetNoteById(pool, idNumParam)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "Such note does not exist",
+					"error":   err.Error(),
+				})
+
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while deleting the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// call the repository endpoint
+		err = repository.DeleteNote(pool, idNumParam)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while deleting the note",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully deleted the note",
+		})
+	}
+}
