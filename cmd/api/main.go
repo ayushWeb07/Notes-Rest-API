@@ -5,6 +5,7 @@ import (
 
 	"github.com/ayushWeb07/Notes-Rest-API/internal/config"
 	"github.com/ayushWeb07/Notes-Rest-API/internal/database"
+	"github.com/ayushWeb07/Notes-Rest-API/internal/handlers"
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,6 +42,7 @@ func main() {
 
 	// setup routes
 	router.GET("/", getHome)
+	router.POST("/notes", handlers.CreateNote(pool))
 
 	// run the server router
 	router.Run(":" + config.Port)
