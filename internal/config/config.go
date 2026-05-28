@@ -10,6 +10,7 @@ import (
 type Config struct {
 	DatabaseConnectionUri string
 	Port                  string
+	JwtSecretKey          string
 }
 
 func LoadConfig() (*Config, error) {
@@ -25,6 +26,7 @@ func LoadConfig() (*Config, error) {
 	c := &Config{
 		DatabaseConnectionUri: os.Getenv("DATABASE_CONNECTION_URI"),
 		Port:                  os.Getenv("PORT"),
+		JwtSecretKey:          os.Getenv("JWT_SECRET_KEY"),
 	}
 
 	return c, nil

@@ -20,6 +20,11 @@ type GetUserByEmailInput struct {
 	Email string `json:"email" binding:"required,min=6,max=50"`
 }
 
+type LoginUserInput struct {
+	Email    string `json:"email" binding:"required,min=6,max=50"`
+	Password string `json:"password" binding:"required,min=8,max=50"`
+}
+
 func RegisterUser(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		data := RegisterUserInput{}
@@ -157,5 +162,53 @@ func GetUserById(pool *pgxpool.Pool) gin.HandlerFunc {
 			"message": "Successfully fetched the user",
 			"user":    user,
 		})
+	}
+}
+
+func LoginUser(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		data := LoginUserInput{}
+
+		// bind the req json body with the user struct
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Failed to login as some fields are missing",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// fetch the user by email
+		existingUser, err := repository.GetUserByEmail(pool, data.Email)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "Such user does not exist",
+					"error":   err.Error(),
+				})
+
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while logging",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// check if their passwords are the same
+		if err := bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(data.Password)); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Failed to login as invalid credentials are provided",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
 	}
 }
