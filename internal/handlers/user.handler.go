@@ -5,6 +5,7 @@ import (
 
 	"github.com/ayushWeb07/Notes-Rest-API/internal/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -12,6 +13,10 @@ import (
 type RegisterUserInput struct {
 	Email    string `json:"email" binding:"required,min=6,max=50"`
 	Password string `json:"password" binding:"required,min=8,max=50"`
+}
+
+type GetUserByEmailInput struct {
+	Email string `json:"email" binding:"required,min=6,max=50"`
 }
 
 func RegisterUser(pool *pgxpool.Pool) gin.HandlerFunc {
@@ -55,6 +60,48 @@ func RegisterUser(pool *pgxpool.Pool) gin.HandlerFunc {
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Successfully registered as a new user",
 			"user":    newUser,
+		})
+	}
+}
+
+func GetUserByEmail(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		data := GetUserByEmailInput{}
+
+		// bind the req json body with the user struct
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Failed to get user by email",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// call the repository endpoint
+		user, err := repository.GetUserByEmail(pool, data.Email)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "User either deleted or does not exist",
+					"error":   err.Error(),
+				})
+
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while fetching the user by email",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully fetched the user",
+			"note":    user,
 		})
 	}
 }
