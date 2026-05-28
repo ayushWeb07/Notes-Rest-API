@@ -33,6 +33,17 @@ func RegisterUser(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
+		// check if user already exist
+		existingUser, _ := repository.GetUserByEmail(pool, data.Email)
+
+		if existingUser != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "User with such email already exists",
+			})
+
+			return
+		}
+
 		// hash the password
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 
@@ -101,7 +112,7 @@ func GetUserByEmail(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Successfully fetched the user",
-			"note":    user,
+			"user":    user,
 		})
 	}
 }
