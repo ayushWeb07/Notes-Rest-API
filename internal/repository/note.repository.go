@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func CreateNote(pool *pgxpool.Pool, title string, description string) (*models.Note, error) {
+func CreateNote(pool *pgxpool.Pool, title string, description string, userId string) (*models.Note, error) {
 
 	// create a timed context to free up resources associated with it & avoid slow connections
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -20,12 +20,13 @@ func CreateNote(pool *pgxpool.Pool, title string, description string) (*models.N
 	// insert query
 	newNote := models.Note{}
 
-	query := "INSERT INTO notes (title, description) VALUES ($1, $2) RETURNING id, title, description, created_at, updated_at"
+	query := "INSERT INTO notes (title, description, user_id) VALUES ($1, $2, $3) RETURNING id, title, description, user_id, created_at, updated_at"
 
-	err := pool.QueryRow(ctx, query, title, description).Scan(
+	err := pool.QueryRow(ctx, query, title, description, userId).Scan(
 		&newNote.ID,
 		&newNote.Title,
 		&newNote.Description,
+		&newNote.UserID,
 		&newNote.CreatedAt,
 		&newNote.UpdatedAt,
 	)
@@ -38,7 +39,7 @@ func CreateNote(pool *pgxpool.Pool, title string, description string) (*models.N
 	return &newNote, nil
 }
 
-func GetAllNotes(pool *pgxpool.Pool) ([]models.Note, error) {
+func GetAllNotes(pool *pgxpool.Pool, userId string) ([]models.Note, error) {
 
 	// create a timed context to free up resources associated with it & avoid slow connections
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -47,9 +48,9 @@ func GetAllNotes(pool *pgxpool.Pool) ([]models.Note, error) {
 	defer cancelFunc()
 
 	// get all query
-	query := "SELECT id, title, description, created_at, updated_at FROM notes ORDER BY updated_at DESC;"
+	query := "SELECT id, title, description, user_id, created_at, updated_at FROM notes WHERE user_id=$1 ORDER BY updated_at DESC;"
 
-	rows, err := pool.Query(ctx, query)
+	rows, err := pool.Query(ctx, query, userId)
 	defer rows.Close()
 
 	if err != nil {
@@ -68,6 +69,7 @@ func GetAllNotes(pool *pgxpool.Pool) ([]models.Note, error) {
 			&note.ID,
 			&note.Title,
 			&note.Description,
+			&note.UserID,
 			&note.CreatedAt,
 			&note.UpdatedAt,
 		)
@@ -88,7 +90,7 @@ func GetAllNotes(pool *pgxpool.Pool) ([]models.Note, error) {
 	return allNotes, nil
 }
 
-func GetNoteById(pool *pgxpool.Pool, id int) (*models.Note, error) {
+func GetNoteById(pool *pgxpool.Pool, id int, userId string) (*models.Note, error) {
 	// create a timed context to free up resources associated with it & avoid slow connections
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -96,13 +98,14 @@ func GetNoteById(pool *pgxpool.Pool, id int) (*models.Note, error) {
 	defer cancelFunc()
 
 	// get single row query
-	query := "SELECT id, title, description, created_at, updated_at FROM notes WHERE id=$1"
+	query := "SELECT id, title, description, user_id, created_at, updated_at FROM notes WHERE id=$1 AND user_id=$2"
 	note := models.Note{}
 
-	err := pool.QueryRow(ctx, query, id).Scan(
+	err := pool.QueryRow(ctx, query, id, userId).Scan(
 		&note.ID,
 		&note.Title,
 		&note.Description,
+		&note.UserID,
 		&note.CreatedAt,
 		&note.UpdatedAt,
 	)
@@ -115,7 +118,7 @@ func GetNoteById(pool *pgxpool.Pool, id int) (*models.Note, error) {
 	return &note, nil
 }
 
-func UpdateNote(pool *pgxpool.Pool, id int, title string, description string) (*models.Note, error) {
+func UpdateNote(pool *pgxpool.Pool, id int, userId string, title string, description string) (*models.Note, error) {
 	// create a timed context to free up resources associated with it & avoid slow connections
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -123,13 +126,14 @@ func UpdateNote(pool *pgxpool.Pool, id int, title string, description string) (*
 	defer cancelFunc()
 
 	// update single row query
-	query := "UPDATE notes SET title=$1, description=$2, updated_at= now() WHERE id=$3 RETURNING id, title, description, created_at, updated_at"
+	query := "UPDATE notes SET title=$1, description=$2, updated_at= now() WHERE id=$3 AND user_id=$4 RETURNING id, title, description, user_id, created_at, updated_at"
 	note := models.Note{}
 
-	err := pool.QueryRow(ctx, query, title, description, id).Scan(
+	err := pool.QueryRow(ctx, query, title, description, id, userId).Scan(
 		&note.ID,
 		&note.Title,
 		&note.Description,
+		&note.UserID,
 		&note.CreatedAt,
 		&note.UpdatedAt,
 	)
@@ -142,7 +146,7 @@ func UpdateNote(pool *pgxpool.Pool, id int, title string, description string) (*
 	return &note, nil
 }
 
-func DeleteNote(pool *pgxpool.Pool, id int) error {
+func DeleteNote(pool *pgxpool.Pool, id int, userId string) error {
 	// create a timed context to free up resources associated with it & avoid slow connections
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -150,9 +154,9 @@ func DeleteNote(pool *pgxpool.Pool, id int) error {
 	defer cancelFunc()
 
 	// delete row query
-	query := "DELETE FROM notes WHERE id=$1"
+	query := "DELETE FROM notes WHERE id=$1 AND user_id=$2"
 
-	cmdTag, err := pool.Exec(ctx, query, id)
+	cmdTag, err := pool.Exec(ctx, query, id, userId)
 
 	if err != nil {
 		fmt.Println("Something went wrong while deleting the note in the database:", err)
