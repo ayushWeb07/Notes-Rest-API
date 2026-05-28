@@ -19,11 +19,12 @@ func RegisterUser(pool *pgxpool.Pool, email string, password string) (*models.Us
 	// insert query
 	newUser := models.User{}
 
-	query := "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email, created_at, updated_at"
+	query := "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email, password, created_at, updated_at"
 
 	err := pool.QueryRow(ctx, query, email, password).Scan(
 		&newUser.ID,
 		&newUser.Email,
+		&newUser.Password,
 		&newUser.CreatedAt,
 		&newUser.UpdatedAt,
 	)
@@ -44,12 +45,13 @@ func GetUserByEmail(pool *pgxpool.Pool, email string) (*models.User, error) {
 	defer cancelFunc()
 
 	// get single row query
-	query := "SELECT id, email, created_at, updated_at FROM users WHERE email=$1"
+	query := "SELECT id, email, password, created_at, updated_at FROM users WHERE email=$1"
 	user := models.User{}
 
 	err := pool.QueryRow(ctx, query, email).Scan(
 		&user.ID,
 		&user.Email,
+		&user.Password,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -70,12 +72,13 @@ func GetUserById(pool *pgxpool.Pool, id string) (*models.User, error) {
 	defer cancelFunc()
 
 	// get single row query
-	query := "SELECT id, email, created_at, updated_at FROM users WHERE id=$1"
+	query := "SELECT id, email, password, created_at, updated_at FROM users WHERE id=$1"
 	user := models.User{}
 
 	err := pool.QueryRow(ctx, query, id).Scan(
 		&user.ID,
 		&user.Email,
+		&user.Password,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
