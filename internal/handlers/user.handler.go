@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ayushWeb07/Notes-Rest-API/internal/repository"
+	"github.com/ayushWeb07/Notes-Rest-API/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -104,6 +105,48 @@ func GetUserByEmail(pool *pgxpool.Pool) gin.HandlerFunc {
 
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Something went wrong while fetching the user by email",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully fetched the user",
+			"user":    user,
+		})
+	}
+}
+
+func GetUserById(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// fetch the id from params
+		idParam := c.Param("id")
+
+		if isValidUUID := utils.IsValidUUID(idParam); isValidUUID == false {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid id passed in the params",
+			})
+
+			return
+		}
+
+		// call the repository endpoint
+		user, err := repository.GetUserById(pool, idParam)
+
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "User either deleted or does not exist",
+					"error":   err.Error(),
+				})
+
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while fetching the user by id",
 				"error":   err.Error(),
 			})
 
