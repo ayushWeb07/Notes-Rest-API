@@ -1,0 +1,60 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/ayushWeb07/Notes-Rest-API/internal/repository"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type RegisterUserInput struct {
+	Email    string `json:"email" binding:"required,min=6,max=50"`
+	Password string `json:"password" binding:"required,min=8,max=50"`
+}
+
+func RegisterUser(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		data := RegisterUserInput{}
+
+		// bind the req json body with the user struct
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Failed to register as a new user",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// hash the password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while hashing the password",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// call the repository endpoint
+		newUser, err := repository.RegisterUser(pool, data.Email, string(hashedPassword))
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Something went wrong while registering as a new user",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Successfully registered as a new user",
+			"user":    newUser,
+		})
+	}
+}
