@@ -52,6 +52,7 @@ func main() {
 
 	// user routes
 	router.POST("/auth/register", handlers.RegisterUser(pool))
+	router.GET("/users", handlers.GetUserByEmail(pool))
 
 	// run the server router
 	router.Run(":" + config.Port)
