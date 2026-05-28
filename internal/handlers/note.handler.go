@@ -22,6 +22,19 @@ type UpdateNoteInput struct {
 
 func CreateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// get user id from auth middleware
+		userIdInterface, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Failed to create a new note as you are not authenticated",
+			})
+
+			return
+		}
+
+		userId := userIdInterface.(string)
+
 		data := CreateNoteInput{}
 
 		// bind the req json body with the note struct
@@ -35,7 +48,7 @@ func CreateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// call the repository endpoint
-		newNote, err := repository.CreateNote(pool, data.Title, data.Description)
+		newNote, err := repository.CreateNote(pool, data.Title, data.Description, userId)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -55,8 +68,21 @@ func CreateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func GetAllNotes(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// get user id from auth middleware
+		userIdInterface, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Failed to fetch all the notes as you are not authenticated",
+			})
+
+			return
+		}
+
+		userId := userIdInterface.(string)
+
 		// call the repository endpoint
-		allNotes, err := repository.GetAllNotes(pool)
+		allNotes, err := repository.GetAllNotes(pool, userId)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -76,6 +102,18 @@ func GetAllNotes(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func GetNoteById(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// get user id from auth middleware
+		userIdInterface, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Failed to fetch the note as you are not authenticated",
+			})
+
+			return
+		}
+
+		userId := userIdInterface.(string)
 
 		// fetch the id from params
 		idParam := c.Param("id")
@@ -91,7 +129,7 @@ func GetNoteById(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// call the repository endpoint
-		note, err := repository.GetNoteById(pool, idNumParam)
+		note, err := repository.GetNoteById(pool, idNumParam, userId)
 
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -120,6 +158,19 @@ func GetNoteById(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func UpdateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// get user id from auth middleware
+		userIdInterface, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Failed to update the note as you are not authenticated",
+			})
+
+			return
+		}
+
+		userId := userIdInterface.(string)
+
 		data := UpdateNoteInput{}
 
 		// bind the req json body with the note struct
@@ -146,7 +197,7 @@ func UpdateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// fetch the existing note
-		existingNote, err := repository.GetNoteById(pool, idNumParam)
+		existingNote, err := repository.GetNoteById(pool, idNumParam, userId)
 
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -190,7 +241,7 @@ func UpdateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// call the repository endpoint
-		updatedNote, err := repository.UpdateNote(pool, idNumParam, title, description)
+		updatedNote, err := repository.UpdateNote(pool, idNumParam, userId, title, description)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -210,6 +261,19 @@ func UpdateNote(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func DeleteNote(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// get user id from auth middleware
+		userIdInterface, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Failed to delete the note as you are not authenticated",
+			})
+
+			return
+		}
+
+		userId := userIdInterface.(string)
+
 		// fetch the id from params
 		idParam := c.Param("id")
 		idNumParam, err := strconv.Atoi(idParam)
@@ -224,7 +288,7 @@ func DeleteNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// fetch the existing note
-		_, err = repository.GetNoteById(pool, idNumParam)
+		_, err = repository.GetNoteById(pool, idNumParam, userId)
 
 		if err != nil {
 			if err == pgx.ErrNoRows {
@@ -245,7 +309,7 @@ func DeleteNote(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// call the repository endpoint
-		err = repository.DeleteNote(pool, idNumParam)
+		err = repository.DeleteNote(pool, idNumParam, userId)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
