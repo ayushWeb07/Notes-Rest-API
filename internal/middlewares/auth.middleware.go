@@ -28,6 +28,15 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 		// trim bearer and get token
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
+		if tokenString == "" || tokenString == authHeader {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid authorization token in header",
+			})
+
+			c.Abort()
+			return
+		}
+
 		// verify token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 
