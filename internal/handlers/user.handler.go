@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/ayushWeb07/Notes-Rest-API/internal/config"
 	"github.com/ayushWeb07/Notes-Rest-API/internal/repository"
 	"github.com/ayushWeb07/Notes-Rest-API/internal/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -165,7 +168,7 @@ func GetUserById(pool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
-func LoginUser(pool *pgxpool.Pool) gin.HandlerFunc {
+func LoginUser(pool *pgxpool.Pool, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		data := LoginUserInput{}
 
@@ -210,5 +213,28 @@ func LoginUser(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
+		// generate the jwt token
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id":    existingUser.ID,
+			"user_email": existingUser.Email,
+			"exp":        time.Now().Add(24 * time.Hour).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte(cfg.JwtSecretKey))
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to login as something went wrong while generating tokens",
+				"error":   err.Error(),
+			})
+
+			return
+		}
+
+		// return the token
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully logged in as " + existingUser.Email,
+			"token":   tokenString,
+		})
 	}
 }

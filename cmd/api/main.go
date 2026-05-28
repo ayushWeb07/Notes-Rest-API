@@ -6,6 +6,7 @@ import (
 	"github.com/ayushWeb07/Notes-Rest-API/internal/config"
 	"github.com/ayushWeb07/Notes-Rest-API/internal/database"
 	"github.com/ayushWeb07/Notes-Rest-API/internal/handlers"
+	"github.com/ayushWeb07/Notes-Rest-API/internal/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
@@ -43,17 +44,25 @@ func main() {
 	// setup routes
 	router.GET("/", getHome)
 
-	// notes routes
-	router.POST("/notes", handlers.CreateNote(pool))
-	router.GET("/notes", handlers.GetAllNotes(pool))
-	router.GET("/notes/:id", handlers.GetNoteById(pool))
-	router.PUT("/notes/:id", handlers.UpdateNote(pool))
-	router.DELETE("/notes/:id", handlers.DeleteNote(pool))
+	// auth routes
+	authRouter := router.Group("/auth")
+	authRouter.POST("/register", handlers.RegisterUser(pool))
+	authRouter.POST("/login", handlers.LoginUser(pool, config))
 
 	// user routes
-	router.POST("/auth/register", handlers.RegisterUser(pool))
-	router.GET("/users", handlers.GetUserByEmail(pool))
-	router.GET("/users/:id", handlers.GetUserById(pool))
+	userRouter := router.Group("/users")
+	userRouter.GET("", handlers.GetUserByEmail(pool))
+	userRouter.GET("/:id", handlers.GetUserById(pool))
+
+	// notes routes
+	notesRouter := router.Group("/notes")
+	notesRouter.Use(middlewares.AuthMiddleware(config)) // protect the routes by jwt
+
+	notesRouter.POST("", handlers.CreateNote(pool))
+	notesRouter.GET("", handlers.GetAllNotes(pool))
+	notesRouter.GET("/:id", handlers.GetNoteById(pool))
+	notesRouter.PUT("/:id", handlers.UpdateNote(pool))
+	notesRouter.DELETE("/:id", handlers.DeleteNote(pool))
 
 	// run the server router
 	router.Run(":" + config.Port)
